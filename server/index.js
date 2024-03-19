@@ -1,7 +1,5 @@
-
-
 // import packages
-const { 
+const {
   client,
   createTables,
   createUser,
@@ -24,9 +22,11 @@ const {
 const express = require('express')
 const app = express();
 
-// ???
-// app.use(express.json());
-// app.use(require('morgan')('dev'));
+// parse the body into JS Objects
+app.use(express.json())
+
+// Log the requests as they come in
+app.use(require('morgan')('dev'))
 
 // middleware function call next with an error if the header named authorization does not have a valid token.
 // If there is a valid token, the req.user should be set to the user who's id is contained in the token
@@ -121,7 +121,7 @@ app.post('/api/users/:id/products', isLoggedIn, async(req, res, next)=> {
       error.status = 401;
       throw error;
     }
-    res.status(201).send(await createFavorite(
+    res.status(201).send(await updateCartProducts(
       { user_id: req.params.id, product_id: req.body.product_id}));
   }
   catch(ex){
@@ -129,7 +129,20 @@ app.post('/api/users/:id/products', isLoggedIn, async(req, res, next)=> {
   }
 });
 
-// login user to change quantity of product
+// login user to change quantity of product in cart
+app.put('/api/users/:id/cart/cartProducts/:id', async (req, res, next) => {
+  try {
+    const SQL = `
+      UPDATE cartProducts
+      SET txt=$1, ranking=$2, updated_at= now()
+      WHERE id=$3 RETURNING *
+    `
+    const response = await client.query(SQL, [req.body.txt, req.body.ranking, req.params.id])
+    res.send(response.rows[0])
+  } catch (ex) {
+    next(ex)
+  }
+})
 
 // login user to delete product from cart
 app.delete('/api/users/:id/cartDetails/:id', isLoggedIn, async(req, res, next)=> {
@@ -148,6 +161,48 @@ app.delete('/api/users/:id/cartDetails/:id', isLoggedIn, async(req, res, next)=>
 });
 
 // login user to purchase products
+
+//  login user to update information about user
+app.put('/api/users/:id/cart/cartProducts/:id', async (req, res, next) => {
+  try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.status(201).send(await createProduct(
+      { product_id: req.body.product_id}));
+  }
+  
+  try {
+    const SQL = `
+      UPDATE cartProducts
+      SET txt=$1, ranking=$2, updated_at= now()
+      WHERE id=$3 
+      RETURNING *
+    `
+    const response = await client.query(SQL, [req.body.txt, req.body.ranking, req.params.id])
+    res.send(response.rows[0])
+  } catch (ex) {
+    next(ex)
+  }
+})
+
+// login user to delete an account
+app.delete('/api/users/:id', isLoggedIn, async(req, res, next)=> {
+  try {
+    if(req.params.user_id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    await deleteUser({ id: req.params.id});
+    res.sendStatus(204);
+  }
+  catch(ex){
+    next(ex);
+  }
+});
 
 //  ADMIN
 //  functions - view products, edit products, view all users
@@ -179,7 +234,20 @@ app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
 });
 
 // admin to edit a product
-
+app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
+  try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.status(201).send(await updateProduct(
+      { product_id: req.body.product_id}));
+  }
+  catch(ex){
+    next(ex);
+  }
+});
 
 // admin to delete a product
 app.delete('/api/products/:id', isLoggedIn, async(req, res, next)=> {
@@ -207,21 +275,6 @@ app.get('/api/users', async(req, res, next)=> {
   }
 });
 
-// admin to delete a user
-app.delete('/api/users/:id', isLoggedIn, async(req, res, next)=> {
-  try {
-    if(req.params.user_id !== req.user.id){
-      const error = Error('not authorized');
-      error.status = 401;
-      throw error;
-    }
-    await deleteUser({ id: req.params.id});
-    res.sendStatus(204);
-  }
-  catch(ex){
-    next(ex);
-  }
-});
 
 const init = async()=> {
     await client.connect();
