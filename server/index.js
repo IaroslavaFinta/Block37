@@ -11,8 +11,7 @@ const {
   seeCartProducts,
   addProductToCart,
   deleteProductFromCart,
-  moreQuantity,
-  lessQuantity,
+  changeQuantity,
   updateUser,
   deleteUser,
   seeUsers,
@@ -31,6 +30,11 @@ app.use(express.json());
 
 // Log the requests as they come in
 app.use(require("morgan")("dev"));
+
+//for deployment only
+const path = require('path');
+app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/index.html')));
+app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))); 
 
 // middleware function call next with an error if the header named authorization does not have a valid token.
 // If there is a valid token, the req.user should be set to the user who's id is contained in the token
@@ -55,6 +59,7 @@ const isAdmin = async (req, res, next) => {
 
 // NOT LOGIN IN USER
 // functions - view all products, create account, login to account
+
 // not require login in to see available products
 app.get("/api/products", async (req, res, next) => {
   try {
@@ -64,14 +69,13 @@ app.get("/api/products", async (req, res, next) => {
   }
 });
 
-app.get("/api/products/:id", async (req, res, next) => {
+app.get("/api/products/:productId", async (req, res, next) => {
   try {
-    res.send(await seeProduct(req.params.id));
+    res.send(await seeProduct(req.params.productId));
   } catch (ex) {
     next(ex);
   }
 });
-
 
 // create an account
 app.post("/api/auth/register", async (req, res, next) => {
@@ -147,8 +151,8 @@ app.post("/api/users/:id/cart/cartProducts", isLoggedIn, async (req, res, next) 
     const cartId = await seeCart(req.params.id);
     res.send(await addProductToCart({
       cart_id: cartId.id,
-      product_id:,
-      quantity:
+      product_id: req.body.product_id,
+      quantity: req.body.quantity,
     }));
   } catch (ex) {
     next(ex);
@@ -156,26 +160,26 @@ app.post("/api/users/:id/cart/cartProducts", isLoggedIn, async (req, res, next) 
 });
 
 // login user to change quantity of product in cart
-app.put("/api/users/:id/cart/cartProducts/:id", async (req, res, next) => {
+app.put("/api/users/:id/cart/cartProducts/:cartProductId", isLoggedIn, async (req, res, next) => {
   try {
-    const SQL = `
-      UPDATE cartProducts
-      SET txt=$1, ranking=$2, updated_at= now()
-      WHERE id=$3 RETURNING *
-    `;
-    const response = await client.query(SQL, [
-      req.body.txt,
-      req.body.ranking,
-      req.params.id,
-    ]);
-    res.send(response.rows[0]);
+    if (req.params.id !== req.user.id) {
+      const error = Error("not authorized");
+      error.status = 401;
+      throw error;
+    }
+    const cartId = await seeCart(req.params.id);
+    res.send(await changeQuantity({
+      cart_id: cartId.id,
+      product_id: req.params.cartProductId,
+      quantity: req.body.quantity,
+    }));
   } catch (ex) {
     next(ex);
   }
 });
 
 // login user to delete product from cart
-app.delete("/api/users/:id/cart/cartProducts/:productId", isLoggedIn, async (req, res, next) => {
+app.delete("/api/users/:id/cart/cartProducts/:cartProductId", isLoggedIn, async (req, res, next) => {
     try {
       if (req.params.user_id !== req.user.id) {
         const error = Error("not authorized");
@@ -183,7 +187,7 @@ app.delete("/api/users/:id/cart/cartProducts/:productId", isLoggedIn, async (req
         throw error;
       }
       const cartId = await seeCart(req.params.id);
-      await deleteProductFromCart({ cart_id: cartId.id, product_id: req.params.productId });
+      await deleteProductFromCart({ cart_id: cartId.id, product_id: req.params.cartProductId });
       res.sendStatus(204);
     } catch (ex) {
       next(ex);
@@ -201,7 +205,12 @@ app.put("/api/users/:id", isLoggedIn, async (req, res, next) => {
       error.status = 401;
       throw error;
     }
-    res.status(201).send(await updateUser({ id: req.params.id }));
+    res.status(201).send(await updateUser({
+      id: req.params.id,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      phone_number: eq.body.phone_number,
+    }));
   } catch (ex) {
     next(ex);
   }
@@ -210,7 +219,7 @@ app.put("/api/users/:id", isLoggedIn, async (req, res, next) => {
 // login user to delete an account
 app.delete("/api/users/:id", isLoggedIn, async (req, res, next) => {
   try {
-    if (req.params.user_id !== req.user.id) {
+    if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
       error.status = 401;
       throw error;
@@ -226,7 +235,7 @@ app.delete("/api/users/:id", isLoggedIn, async (req, res, next) => {
 //  functions - view products, edit products, view all users
 
 // admin to see all products
-app.get("/api/products", isLoggedIn, isAdmin, async (req, res, next) => {
+app.get("/api/users/:id/products", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
@@ -240,44 +249,53 @@ app.get("/api/products", isLoggedIn, isAdmin, async (req, res, next) => {
 });
 
 // admin to add a product
-app.post("/api/products", isLoggedIn, isAdmin, async (req, res, next) => {
+app.post("/api/users/:id/products", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
       error.status = 401;
       throw error;
     }
-    res
-      .status(201)
-      .send(await createProduct({ product_id: req.body.product_id }));
+    res.status(201).send(await createProduct({
+      name: req.body.name,
+      price: req.body.price,
+      description: req.body.description,
+      inventory: req.body.inventory
+    }));
   } catch (ex) {
     next(ex);
   }
 });
 
 // admin to edit a product
-app.post("/api/products/:id", isLoggedIn, isAdmin, async (req, res, next) => {
+app.post("/api/users/:id/products/:productId", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
       error.status = 401;
       throw error;
     }
-    res.status(201).send(await updateProduct({ product_id: req.body.product_id }));
+    res.status(201).send(await updateProduct({
+      id: req.params.productId,
+      name: req.body.name,
+      price: req.body.price,
+      description: req.body.description,
+      inventory: req.body.inventory
+    }));
   } catch (ex) {
     next(ex);
   }
 });
 
 // admin to delete a product
-app.delete("/api/products/:id", isLoggedIn, isAdmin, async (req, res, next) => {
+app.delete("/api/users/:id/products/:productId", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
-    if (req.params.product_id !== req.user.id) {
+    if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
       error.status = 401;
       throw error;
     }
-    await deleteProduct(req.params.id);
+    await deleteProduct(req.params.productId);
     res.sendStatus(204);
   } catch (ex) {
     next(ex);
@@ -285,7 +303,7 @@ app.delete("/api/products/:id", isLoggedIn, isAdmin, async (req, res, next) => {
 });
 
 // admin see all users
-app.get("/api/users", isLoggedIn, isAdmin, async (req, res, next) => {
+app.get("/api/users/:id/users", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");

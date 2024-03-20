@@ -57,7 +57,7 @@ const createTables = async () => {
   await client.query(SQL);
 };
 
-// all users
+// all  products
 const seeProducts = async()=> {
   const SQL = `
     SELECT *
@@ -67,6 +67,7 @@ const seeProducts = async()=> {
   return response.rows;
 };
 
+// single product
 const seeProduct = async(id)=> {
   const SQL = `
     SELECT *
@@ -93,6 +94,7 @@ const createUser = async ({email, password, is_admin}) => {
   return response.rows[0];
 };
 
+// new cart
 const createCart = async({user_id})=> {
   const SQL = `
     INSERT INTO carts(id, user_id )
@@ -103,6 +105,7 @@ const createCart = async({user_id})=> {
   return response.rows[0];
 };
 
+// see cart details
 const seeCart = async(userId)=> {
   const GET_CART_ID = `
     SELECT *
@@ -116,6 +119,7 @@ const seeCart = async(userId)=> {
     return cartIdRes.rows[cartIdRes.rows.length-1];
 };
 
+// new cart product
 const createCartProduct = async({cart_id, product_id, quantity})=> {
     const SQL = `
       INSERT INTO cart_products(id, cart_id, product_id, quantity)
@@ -126,6 +130,7 @@ const createCartProduct = async({cart_id, product_id, quantity})=> {
     return response.rows[0];
   };
 
+// view cart products
 const seeCartProducts = async(cart_id)=> {
     const SQL = `
       SELECT *
@@ -136,6 +141,7 @@ const seeCartProducts = async(cart_id)=> {
     return response.rows;
 };
 
+// add a product to cart
 const addProductToCart = async({cart_id, product_id, quantity}) => {
   const SQL = `
     INSERT
@@ -158,22 +164,25 @@ const deleteProductFromCart = async({cart_id, product_id}) => {
   return response.rows[0];
 }
 
-const moreQuantity = async() => {
-
-}
-
-const lessQuantity = async() => {
-  
-}
-
-const updateUser = async(id)=> {
+const changeQuantity = async({cart_id, product_id, quantity}) => {
   const SQL = `
-    UPDATE users
-    SET firstName=$1, lastName=$2, phoneNumber = $3 updated_at= now()
-    WHERE id=$3
+    UPDATE cart_products
+    SET quantity=$1
+    WHERE product_id=$2 AND cart_id=$3
     RETURNING *
   `;
-  const response = await client.query(SQL, [req.params.id, req.body.firstName, req.body.lastName, req.body.phone_number ]);
+  const response = await client.query(SQL, [cart_id, product_id, quantity]);
+  return response.rows[0];
+}
+
+const updateUser = async({firstName, lastName, phone_number})=> {
+  const SQL = `
+    UPDATE users
+    SET firstName=$1, lastName=$2, phoneNumber = $3, updated_at= now()
+    WHERE id=$4
+    RETURNING *
+  `;
+  const response = await client.query(SQL, [firstName, lastName, phone_number]);
   return response.rows;
 };
 
@@ -182,7 +191,7 @@ const deleteUser = async(id)=> {
     DELETE FROM users
     where id = $1
   `;
-  await client.query(SQL);
+  await client.query(SQL, [id]);
 };
 
 // admin
@@ -205,14 +214,14 @@ const createProduct = async ({ name, price, description, inventory }) => {
   return response.rows[0];
 };
 
-const updateProduct = async()=> {
+const updateProduct = async({ name, price, description, inventory })=> {
   const SQL = `
     UPDATE products
-    SET price=$1, description=$2, inventory=$3, updated_at= now()
-    WHERE id = $4
+    SET name =$1 price=$2, description=$3, inventory=$4, updated_at= now()
+    WHERE id = $5
     RETURNING *
   `;
-  const response = await client.query(SQL, [req.body.price, req.body.description, req.body.inventory, req.params.id]);
+  const response = await client.query(SQL, [{ name, price, description, inventory }]);
   return response.rows[0];
 };
 
@@ -221,7 +230,7 @@ const deleteProduct = async(id)=> {
     DELETE FROM products
     where id = $1
   `;
-  await client.query(SQL);
+  await client.query(SQL, [id]);
 };
 
 // check password during authentication
@@ -288,8 +297,7 @@ module.exports = {
   seeCartProducts,
   addProductToCart,
   deleteProductFromCart,
-  moreQuantity,
-  lessQuantity,
+  changeQuantity,
   updateUser,
   deleteUser,
   seeUsers,
