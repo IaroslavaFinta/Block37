@@ -142,12 +142,12 @@ function App() {
 
   // products
   useEffect(() => {
-    const fetchProducts = async () => {
+    const seeProducts = async () => {
       const response = await fetch("/api/products");
       const json = await response.json();
       setProducts(json);
     };
-    fetchProducts();
+    seeProducts();
   }, []);
 
   const register = async (credentials) => {
@@ -207,7 +207,7 @@ function App() {
           return (
             <li key={product.id}>
               {product.name}
-              <button onClick={() => addProduct(product.id)}>Add Product to Cart</button>
+              <button>Add Product to Cart</button>
             </li>
           );
         })}
