@@ -1,59 +1,121 @@
 import { useState, useEffect } from "react";
 
 const Registration = ({ register }) => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mailingAddress, setMailingAddress] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [billingInformation, setBillingInformation] = useState("");
 
   const submit = (ev) => {
     ev.preventDefault();
-    register({ username, password });
+    register({ email, password });
   };
   return (
+    <div className="login">
+          <h1>Register</h1>
     <form onSubmit={submit}>
-      <input
-        value={username}
-        placeholder="username"
-        onChange={(ev) => setUsername(ev.target.value)}
+      <label htmlFor="email" className="email">
+        Email address:{" "}
+        <input
+          value={email}
+          placeholder="email"
+          onChange={(ev) => setEmail(ev.target.value)}
+        />
+      </label>
+      <label htmlFor="password" className="password">
+        Password: {" "}
+        <input
+          value={password}
+          placeholder="password"
+          onChange={(ev) => setPassword(ev.target.value)}
+        />
+      </label>
+      <label htmlFor="firstName" className="firstName">
+        First Name: {" "}
+        <input
+          value={firstName}
+          placeholder="firstName"
+          onChange={(ev) => setFirstName(ev.target.value)}
+        />
+      </label>
+      <label htmlFor="lastName" className="lastName">
+        Last Name: {" "}
+        <input
+          value={lastName}
+          placeholder="lastName"
+          onChange={(ev) => setLastName(ev.target.value)}
+        />
+      </label>
+      <label htmlFor="mailingAddress" className="mailingAddress">
+        Mailing Address: {" "}
+        <input
+        value={mailingAddress}
+        placeholder="mailing address"
+        onChange={(ev) => setMailingAddress(ev.target.value)}
       />
-      <input
-        value={password}
-        placeholder="password"
-        onChange={(ev) => setPassword(ev.target.value)}
+      </label>
+      <label htmlFor="phoneNumber" className="phoneNumber">
+        Phone number: {" "}
+        <input
+        value={phoneNumber}
+        placeholder="phone number"
+        onChange={(ev) => setPhoneNumber(ev.target.value)}
       />
-      <button disabled={!username || !password}>Register</button>
+      </label>
+      <label htmlFor="billingInfo" className="billingInfo">
+        Billing Information: {" "}
+        <input
+        value={billingInformation}
+        placeholder="billing information"
+        onChange={(ev) => setBillingInformation(ev.target.value)}
+      />
+      </label>
+      <button>Register</button>
     </form>
+    </div>
   );
 };
 
 const Login = ({ login }) => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const submit = (ev) => {
     ev.preventDefault();
-    login({ username, password });
+    login({ email, password });
   };
   return (
+    <div className="login">
+          <h1>Login to your account</h1>
     <form onSubmit={submit}>
-      <input
-        value={username}
-        placeholder="username"
-        onChange={(ev) => setUsername(ev.target.value)}
+      <label htmlFor="email" className="email">
+        Email: {" "}
+        <input
+        value={email}
+        placeholder="email"
+        onChange={(ev) => setEmail(ev.target.value)}
       />
-      <input
+      </label>
+      <label htmlFor="password" className="password">
+        Password: {" "}
+        <input
         value={password}
         placeholder="password"
         onChange={(ev) => setPassword(ev.target.value)}
       />
-      <button disabled={!username || !password}>Login</button>
+      </label>
+      <button>Login</button>
     </form>
+    </div>
   );
 };
 
 function App() {
   const [auth, setAuth] = useState({});
   const [products, setProducts] = useState([]);
-  const [favorites, setFavorites] = useState([]);
   const [successMessage, setSuccessMessage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -85,31 +147,8 @@ function App() {
       const json = await response.json();
       setProducts(json);
     };
-
     fetchProducts();
   }, []);
-
-  // favorites
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      const response = await fetch(`/api/users/${auth.id}/favorites`, {
-        headers: {
-          authorization: window.localStorage.getItem("token"),
-        },
-      });
-      const json = await response.json();
-      if (response.ok) {
-        setFavorites(json);
-      } else {
-        console.log(json);
-      }
-    };
-    if (auth.id) {
-      fetchFavorites();
-    } else {
-      setFavorites([]);
-    }
-  }, [auth]);
 
   const register = async (credentials) => {
     const response = await fetch("/api/auth/register", {
@@ -139,7 +178,6 @@ function App() {
         "Content-Type": "application/json",
       },
     });
-
     const json = await response.json();
     if (response.ok) {
       window.localStorage.setItem("token", json.token);
@@ -147,37 +185,6 @@ function App() {
       setSuccessMessage("Login success");
     } else {
       setError("Failed to login");
-      console.log(json);
-    }
-  };
-
-  const addFavorite = async (product_id) => {
-    const response = await fetch(`/api/users/${auth.id}/favorites`, {
-      method: "POST",
-      body: JSON.stringify({ product_id }),
-      headers: {
-        "Content-Type": "application/json",
-        authorization: window.localStorage.getItem("token"),
-      },
-    });
-    const json = await response.json();
-    if (response.ok) {
-      setFavorites([...favorites, json]);
-    } else {
-      console.log(json);
-    }
-  };
-
-  const removeFavorite = async (id) => {
-    const response = await fetch(`/api/users/${auth.id}/favorites/${id}`, {
-      method: "DELETE",
-      headers: {
-        authorization: window.localStorage.getItem("token"),
-      },
-    });
-    if (response.ok) {
-      setFavorites(favorites.filter((favorite) => favorite.id !== id));
-    } else {
       console.log(json);
     }
   };
@@ -193,22 +200,14 @@ function App() {
       {!auth.id ? (
         <Login login={login} />
       ) : (
-        <button onClick={logout}>Logout {auth.username}</button>
+        <button onClick={logout}>Logout {auth.email}</button>
       )}
       <ul>
         {products.map((product) => {
-          const isFavorite = favorites.find(
-            (favorite) => favorite.product_id === product.id
-          );
           return (
-            <li key={product.id} className={isFavorite ? "favorite" : ""}>
+            <li key={product.id}>
               {product.name}
-              {auth.id && isFavorite && (
-                <button onClick={() => removeFavorite(isFavorite.id)}>-</button>
-              )}
-              {auth.id && !isFavorite && (
-                <button onClick={() => addFavorite(product.id)}>+</button>
-              )}
+              <button onClick={() => addProduct(product.id)}>Add Product to Cart</button>
             </li>
           );
         })}

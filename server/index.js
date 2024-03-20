@@ -6,9 +6,10 @@ const {
   createProduct,
   createCart,
   createCartProduct,
-  fetchUsers,
-  fetchProducts,
-  fetchCartProducts,
+  seeUsers,
+  seeProducts,
+  seeCartProducts,
+  seeCarts,
   updateUser,
   updateProduct,
   updateCartProducts,
@@ -17,22 +18,36 @@ const {
   deleteCartProduct,
   authenticate,
   findUserWithToken,
+  findAdminWithToken,
+  getCartIdByUserId
 } = require('./db');
 
 const express = require('express')
 const app = express();
 
 // parse the body into JS Objects
-app.use(express.json())
+app.use(express.json());
 
 // Log the requests as they come in
-app.use(require('morgan')('dev'))
+app.use(require('morgan')('dev'));
 
 // middleware function call next with an error if the header named authorization does not have a valid token.
 // If there is a valid token, the req.user should be set to the user who's id is contained in the token
 const isLoggedIn = async(req, res, next)=> {
   try {
+    console.log(req.headers.authorization)
     req.user = await findUserWithToken(req.headers.authorization);
+    next();
+  }
+  catch(ex){
+    next(ex);
+  }
+};
+
+//  middleware for admin
+const isAdmin = async(req, res, next)=> {
+  try {
+    req.user = await findAdminWithToken(req.headers.authorization);
     next();
   }
   catch(ex){
@@ -45,7 +60,7 @@ const isLoggedIn = async(req, res, next)=> {
 // not require login in to see available products
 app.get('/api/products', async(req, res, next)=> {
     try {
-      res.send(await fetchProducts());
+      res.send(await seeProducts());
     }
     catch(ex){
       next(ex);
@@ -64,9 +79,9 @@ app.post("/api/auth/register", async (req, res, next) => {
 // login to account
 app.post('/api/auth/login', async(req, res, next)=> {
   try {
+    
     res.send(await authenticate(req.body));
-  }
-  catch(ex){
+  } catch(ex){
     next(ex);
   }
 });
@@ -91,7 +106,8 @@ app.get('/api/users/:id/cart', isLoggedIn, async(req, res, next)=> {
       error.status = 401;
       throw error;
     }
-    res.send(await fetchCart(req.params.id));
+    res.send(await seeCart(req.params.id));
+
   }
   catch(ex){
     next(ex);
@@ -99,6 +115,9 @@ app.get('/api/users/:id/cart', isLoggedIn, async(req, res, next)=> {
 });
 
 // login user to see cart products
+//Since, we're passing in the id of the user as a param
+//We need to fetch Carts that are associated with that User
+//Once we find the cart with that User, we can then use that cart_id to query for information about the cart
 app.get('/api/users/:id/cartDetails', isLoggedIn, async(req, res, next)=> {
   try {
     if(req.params.id !== req.user.id){
@@ -106,7 +125,10 @@ app.get('/api/users/:id/cartDetails', isLoggedIn, async(req, res, next)=> {
       error.status = 401;
       throw error;
     }
-    res.send(await fetchCartProducts(req.params.id));
+    const cartId = await getCartIdByUserId(req.params.id);
+    
+    const cartProducts = await seeCartProducts(cartId.id);
+    res.send(cartProducts);
   }
   catch(ex){
     next(ex);
@@ -170,19 +192,8 @@ app.put('/api/users/:id/cart/cartProducts/:id', async (req, res, next) => {
       error.status = 401;
       throw error;
     }
-    res.status(201).send(await createProduct(
-      { product_id: req.body.product_id}));
-  }
-  
-  try {
-    const SQL = `
-      UPDATE cartProducts
-      SET txt=$1, ranking=$2, updated_at= now()
-      WHERE id=$3 
-      RETURNING *
-    `
-    const response = await client.query(SQL, [req.body.txt, req.body.ranking, req.params.id])
-    res.send(response.rows[0])
+    res.status(201).send(await updateUser(
+      { id: req.params.id}));
   } catch (ex) {
     next(ex)
   }
@@ -208,9 +219,14 @@ app.delete('/api/users/:id', isLoggedIn, async(req, res, next)=> {
 //  functions - view products, edit products, view all users
 
 // admin to see all products
-app.get('/api/products', async(req, res, next)=> {
+app.get('/api/products', isAdmin, async(req, res, next)=> {
   try {
-    res.send(await fetchProducts());
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.send(await seeProducts());
   }
   catch(ex){
     next(ex);
@@ -218,7 +234,7 @@ app.get('/api/products', async(req, res, next)=> {
 });
 
 // admin to add a product
-app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
+app.post('/api/products/:id', isAdmin, async(req, res, next)=> {
   try {
     if(req.params.id !== req.user.id){
       const error = Error('not authorized');
@@ -234,7 +250,7 @@ app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
 });
 
 // admin to edit a product
-app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
+app.post('/api/products/:id', isAdmin, async(req, res, next)=> {
   try {
     if(req.params.id !== req.user.id){
       const error = Error('not authorized');
@@ -250,7 +266,7 @@ app.post('/api/products/:id', isLoggedIn, async(req, res, next)=> {
 });
 
 // admin to delete a product
-app.delete('/api/products/:id', isLoggedIn, async(req, res, next)=> {
+app.delete('/api/products/:id', isAdmin, async(req, res, next)=> {
   try {
     if(req.params.product_id !== req.user.id){
       const error = Error('not authorized');
@@ -266,15 +282,19 @@ app.delete('/api/products/:id', isLoggedIn, async(req, res, next)=> {
 });
 
 // admin see all users
-app.get('/api/users', async(req, res, next)=> {
+app.get('/api/users', isAdmin, async(req, res, next)=> {
   try {
-    res.send(await fetchUsers());
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.send(await seeUsers());
   }
   catch(ex){
     next(ex);
   }
 });
-
 
 const init = async()=> {
     await client.connect();
@@ -282,26 +302,37 @@ const init = async()=> {
     await createTables();
     console.log('tables created');
     const [jack, lily, mark, coke, pasta, chocolate] = await Promise.all([
-      createUser({ username: 'jack', password: 'mooo' }),
-      createUser({ username: 'lily', password: 'rufruf' }),
-      createUser({ username: 'mark', password: 'barkbark' }),
-      createProduct({ name: 'coke'}),
-      createProduct({ name: 'pasta'}),
-      createProduct({ name: 'chocolate'}),
+      createUser({ email: 'jack@gmail.com', password: 'mooo' }),
+      createUser({ email: 'lily@gmail.com', password: 'rufruf' }),
+      createUser({ email: 'mark@gmail.com', password: 'barkbark' }),
+      createProduct({ name: 'coke', price: 3, description: 'very good cookie', inventory: 5}),
+      createProduct({ name: 'pasta', price: 1, description: 'very good pasta', inventory: 3}),
+      createProduct({ name: 'chocolate', price: 1, description: 'very good chocolate', inventory: 3}),
     ]);
-    const users = await fetchUsers();
+    const users = await seeUsers();
+    console.log("Users");
     console.log(users);
-    const products = await fetchProducts();
+    const products = await seeProducts();
+    console.log("Products");
     console.log(products);
-    const favorites = await Promise.all([
-      createFavorite({ user_id: jack.id, product_id: chocolate.id}),
-      createFavorite({ user_id: lily.id, product_id: pasta.id}),
-      createFavorite({ user_id: mark.id, product_id: coke.id, product_name: "coke"}),
+    const cart = await Promise.all ([
+      createCart({user_id: jack.id}),
+      createCart({user_id: lily.id}),
+      createCart({user_id: mark.id}),
     ]);
-    console.log(await fetchFavorites(jack.id));
-    await destroyFavorite(favorites[0].id);
-    console.log(await fetchFavorites(jack.id));
-  
+    const carts = await seeCarts();
+    const firstCart = carts[0];
+    // console.log("Carts");
+    console.log({firstCart});
+    const [chocolatey, pasty, soda] = await Promise.all([
+      createCartProduct({ cart_id: firstCart.id, product_id: chocolate.id, quantity: 2}),
+      createCartProduct({ cart_id: firstCart.id, product_id: pasta.id, quantity: 1}),
+      createCartProduct({ cart_id: firstCart.id, product_id: coke.id, quantity: 4}),
+    ]);
+    console.log(chocolatey,pasty,soda);
+
+    // console.log(await seeCartProducts(jack.id));
+
     const port = process.env.PORT || 3000;
     app.listen(port, ()=> console.log(`listening on port ${port}`));
   };
