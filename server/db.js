@@ -175,14 +175,14 @@ const changeQuantity = async({cart_id, product_id, quantity}) => {
   return response.rows[0];
 }
 
-const updateUser = async({firstName, lastName, phone_number})=> {
+const updateUser = async({firstName, lastName, phone_number, id})=> {
   const SQL = `
     UPDATE users
     SET firstName=$1, lastName=$2, phone_number=$3, updated_at=now()
     WHERE id=$4
     RETURNING *
   `;
-  const response = await client.query(SQL, [firstName, lastName, phone_number]);
+  const response = await client.query(SQL, [firstName, lastName, phone_number, id]);
   return response.rows;
 };
 

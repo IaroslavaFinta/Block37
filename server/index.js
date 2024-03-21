@@ -206,10 +206,10 @@ app.put("/api/users/:id", isLoggedIn, async (req, res, next) => {
       throw error;
     }
     res.status(201).send(await updateUser({
-      id: req.params.id,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      phone_number: req.body.phone_number
+      phone_number: req.body.phone_number,
+      id: req.params.id
     }));
   } catch (ex) {
     next(ex);
