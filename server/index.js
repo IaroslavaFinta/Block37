@@ -50,7 +50,7 @@ const isLoggedIn = async (req, res, next) => {
 
 //  middleware for admin
 const isAdmin = async (req, res, next) => {
-  if (!req.user.isAdmin){
+  if (!req.user.is_admin){
     res.status(201).send("Not admin");
   } else {
     res.send(req.user);
@@ -134,7 +134,7 @@ app.get("/api/users/:id/cart/cartProducts", isLoggedIn, async (req, res, next) =
     }
     const cartId = await seeCart(req.params.id);
     const cartProducts = await seeCartProducts(cartId.id);
-    res.send(cartProducts);
+    res.status(201).send(cartProducts);
   } catch (ex) {
     next(ex);
   }
@@ -209,7 +209,7 @@ app.put("/api/users/:id", isLoggedIn, async (req, res, next) => {
       id: req.params.id,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      phone_number: eq.body.phone_number,
+      phone_number: req.body.phone_number
     }));
   } catch (ex) {
     next(ex);
@@ -322,24 +322,24 @@ const init = async () => {
   await createTables();
   console.log("tables created");
   const [jack, lily, mark, coke, pasta, chocolate] = await Promise.all([
-    createUser({ email: "jack@gmail.com", password: "mooo" }),
-    createUser({ email: "lily@gmail.com", password: "rufruf" }),
-    createUser({ email: "mark@gmail.com", password: "barkbark" }),
+    createUser({ email: "jack@gmail.com", password: "mooo", is_admin: true}),
+    createUser({ email: "lily@gmail.com", password: "rufruf", is_admin: false }),
+    createUser({ email: "mark@gmail.com", password: "barkbark", is_admin: false }),
     createProduct({
       name: "coke",
-      price: 3,
+      price: 3.99,
       description: "very good cookie",
       inventory: 5,
     }),
     createProduct({
       name: "pasta",
-      price: 1,
+      price: 5.85,
       description: "very good pasta",
       inventory: 3,
     }),
     createProduct({
       name: "chocolate",
-      price: 1,
+      price: 2.99,
       description: "very good chocolate",
       inventory: 3,
     }),

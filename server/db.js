@@ -178,7 +178,7 @@ const changeQuantity = async({cart_id, product_id, quantity}) => {
 const updateUser = async({firstName, lastName, phone_number})=> {
   const SQL = `
     UPDATE users
-    SET firstName=$1, lastName=$2, phoneNumber = $3, updated_at= now()
+    SET firstName=$1, lastName=$2, phone_number=$3, updated_at=now()
     WHERE id=$4
     RETURNING *
   `;
