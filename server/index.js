@@ -268,7 +268,7 @@ app.post("/api/users/:id/products", isLoggedIn, isAdmin, async (req, res, next) 
 });
 
 // admin to edit a product
-app.post("/api/users/:id/products/:productId", isLoggedIn, isAdmin, async (req, res, next) => {
+app.put("/api/users/:id/products/:productId", isLoggedIn, isAdmin, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       const error = Error("not authorized");
@@ -323,8 +323,8 @@ const init = async () => {
   console.log("tables created");
   const [jack, lily, mark, coke, pasta, chocolate] = await Promise.all([
     createUser({ email: "jack@gmail.com", password: "mooo", is_admin: true}),
-    createUser({ email: "lily@gmail.com", password: "rufruf", is_admin: false }),
-    createUser({ email: "mark@gmail.com", password: "barkbark", is_admin: false }),
+    createUser({ email: "lily@gmail.com", password: "rufruf"}),
+    createUser({ email: "mark@gmail.com", password: "barkbark"}),
     createProduct({
       name: "coke",
       price: 3.99,

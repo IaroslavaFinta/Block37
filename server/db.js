@@ -145,8 +145,8 @@ const seeCartProducts = async(cart_id)=> {
 const addProductToCart = async({cart_id, product_id, quantity}) => {
   const SQL = `
     INSERT
-    INTO cart_products (cart_id, product_id, quantity)
-    VALUES($1, $2, $3)
+    INTO cart_products (id, cart_id, product_id, quantity)
+    VALUES($1, $2, $3, $4)
     RETURNING *
   `;
   const response = await client.query(SQL, [uuid.v4(), cart_id, product_id, quantity]);
