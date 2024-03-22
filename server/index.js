@@ -39,8 +39,8 @@ app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))
 // middleware function call next with an error if the header named authorization does not have a valid token.
 // If there is a valid token, the req.user should be set to the user who's id is contained in the token
 const isLoggedIn = async (req, res, next) => {
+  // console.log(req.headers.authorization);
   try {
-    console.log(req.headers.authorization);
     req.user = await findUserWithToken(req.headers.authorization);
     next();
   } catch (ex) {
@@ -50,12 +50,24 @@ const isLoggedIn = async (req, res, next) => {
 
 //  middleware for admin
 const isAdmin = async (req, res, next) => {
+  console.log("IsAdmin",req.user);
   if (!req.user.is_admin){
-    res.status(201).send("Not admin");
-  } else {
-    res.send(req.user);
+    res.status(400).send("Not admin");
   }
+  next();
 };
+
+// option 2
+// const isAdminOption = async (req, res, next) => {
+//   try {
+//     console.log(req.headers.authorization);
+//     req.user = await findUserWithToken(req.headers.authorization);
+//     next();
+//   } catch (ex) {
+//     next(ex);
+//   }
+// };
+
 
 // NOT LOGIN IN USER
 // functions - view all products, create account, login to account

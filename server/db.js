@@ -28,7 +28,7 @@ const createTables = async () => {
     firstName VARCHAR(100),
     lastName VARCHAR(100),
     phone_number VARCHAR(100),
-    is_admin BOOLEAN DEFAULT FALSE
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE
   );
 
   CREATE TABLE products(
@@ -80,6 +80,7 @@ const seeProduct = async(id)=> {
 
 //  log in user
 const createUser = async ({email, password, is_admin}) => {
+  if(!is_admin) is_admin = false;
   const SQL = `
     INSERT INTO users(id, email, password, is_admin)
     VALUES($1, $2, $3, $4)
@@ -250,7 +251,7 @@ const authenticate = async({ email, password })=> {
     error.status = 401;
     throw error;
   }
-  const token = await jwt.sign({ id: response.rows[0].id}, JWT);
+  const token = await jwt.sign({ id: response.rows[0].id, admin: response.rows[0].is_admin} , JWT);
   return { token: token };
 };
 
@@ -262,7 +263,6 @@ const findUserWithToken = async(token)=> {
   let id;
   try {
     const payload = await jwt.verify(token, JWT);
-    console.log({payload})
     id = payload.id;
   }
   catch(ex){
@@ -271,12 +271,11 @@ const findUserWithToken = async(token)=> {
     throw error;
   }
   const SQL = `
-    SELECT id, email
+    SELECT id, email, is_admin
     FROM users
     WHERE id=$1;
   `;
   const response = await client.query(SQL, [id]);
-  console.log(response.rows[0], 'line 269')
   if(!response.rows.length){
     const error = Error('not authorized');
     error.status = 401;
