@@ -198,7 +198,7 @@ const deleteUser = async(id)=> {
 // admin
 const seeUsers = async()=> {
   const SQL = `
-    SELECT *
+    SELECT email, firstName, lastName, phone_number, is_admin
     FROM users
   `;
   const response = await client.query(SQL);
