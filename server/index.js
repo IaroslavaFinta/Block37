@@ -15,6 +15,7 @@ const {
   updateUser,
   deleteUser,
   seeUsers,
+  seeCarts,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -360,42 +361,43 @@ const init = async () => {
   console.log("Users: ", users);
   const products = await seeProducts();
   console.log("Products: ", products);
-  const carts = await Promise.all([
+  const [jackCart, lilyCart, markCart] = await Promise.all([
     createCart({ user_id: jack.id }),
     createCart({ user_id: lily.id }),
     createCart({ user_id: mark.id }),
   ]);
+  const carts = await seeCarts();
   console.log("Carts: ", carts);
 
   const productsInCart = await Promise.all([
     createCartProduct({
-      cart_id: carts[0].id,
+      cart_id: jackCart.id,
       product_id: chocolate.id,
       quantity: 2,
     }),
     createCartProduct({
-      cart_id: carts[0].id,
+      cart_id: jackCart.id,
       product_id: pasta.id,
       quantity: 1,
     }),
     createCartProduct({
-      cart_id: carts[1].id,
+      cart_id: lilyCart.id,
       product_id: coke.id,
       quantity: 2,
     }),
     createCartProduct({
-      cart_id: carts[1].id,
+      cart_id: lilyCart.id,
       product_id: pasta.id,
       quantity: 4,
     }),
     createCartProduct({
-      cart_id: carts[2].id,
+      cart_id: markCart.id,
       product_id: coke.id,
       quantity: 4,
     }),
   ]);
 
-  console.log(productsInCart);
+  console.log("ProductsInCart:", productsInCart);
 
   const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`listening on port ${port}`));

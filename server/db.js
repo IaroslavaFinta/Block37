@@ -205,6 +205,15 @@ const seeUsers = async()=> {
   return response.rows;
 };
 
+const seeCarts = async() => {
+  const SQL = `
+    SELECT *
+    FROM carts
+  `;
+  const response = await client.query(SQL);
+  return response.rows;
+}
+
 const createProduct = async ({ name, price, description, inventory }) => {
   const SQL = `
     INSERT INTO products(id, name, price, description, inventory)
@@ -300,6 +309,7 @@ module.exports = {
   updateUser,
   deleteUser,
   seeUsers,
+  seeCarts,
   createProduct,
   updateProduct,
   deleteProduct,
