@@ -14,10 +14,10 @@ const JWT = process.env.JWT || 'shhh';
 
 const createTables = async () => {
   const SQL = `
-  DROP TABLE IF EXISTS cart_products;
-  DROP TABLE IF EXISTS carts;
-  DROP TABLE IF EXISTS users;
-  DROP TABLE IF EXISTS products;
+  DROP TABLE IF EXISTS cart_products CASCADE;
+  DROP TABLE IF EXISTS carts CASCADE;
+  DROP TABLE IF EXISTS users CASCADE;
+  DROP TABLE IF EXISTS products CASCADE;
 
   CREATE TABLE users(
     id UUID PRIMARY KEY,
