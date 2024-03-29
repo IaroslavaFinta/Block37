@@ -32,11 +32,6 @@ app.use(express.json());
 // Log the requests as they come in
 app.use(require("morgan")("dev"));
 
-//for deployment only
-const path = require('path');
-app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/index.html')));
-app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))); 
-
 // middleware function call next with an error if the header named authorization does not have a valid token.
 // If there is a valid token, the req.user should be set to the user who's id is contained in the token
 const isLoggedIn = async (req, res, next) => {
